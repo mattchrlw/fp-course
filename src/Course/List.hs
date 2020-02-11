@@ -33,8 +33,14 @@ import qualified Numeric as N
 -- The custom list type
 data List t =
   Nil
-  | t :. List t
+  -- | t :. List t
+  | (:.) t (List t)
   deriving (Eq, Ord)
+
+-- add 10 to the head (if there is one)
+exampleListProblem :: List Integer -> List Integer
+exampleListProblem Nil = Nil
+exampleListProblem (h :. t) = h + 10 :. t
 
 -- Right-associative
 infixr 5 :.
@@ -72,11 +78,11 @@ foldLeft f b (h :. t) = let b' = f b h in b' `seq` foldLeft f b' t
 --
 -- prop> \x -> x `headOr` Nil == x
 headOr ::
-  a
-  -> List a
-  -> a
-headOr =
-  error "todo: Course.List#headOr"
+  a -> List a -> a
+headOr = \x -> \y -> case y of
+  Nil -> x
+  h :. _ -> h
+
 
 -- | The product of the elements of a list.
 --
@@ -89,10 +95,10 @@ headOr =
 -- >>> product (1 :. 2 :. 3 :. 4 :. Nil)
 -- 24
 product ::
-  List Int
-  -> Int
-product =
-  error "todo: Course.List#product"
+  List Int -> Int
+product = \x -> case x of
+  Nil -> 1
+  h :. t -> h * product t
 
 -- | Sum the elements of the list.
 --
@@ -104,10 +110,23 @@ product =
 --
 -- prop> \x -> foldLeft (-) (sum x) x == 0
 sum ::
-  List Int
-  -> Int
-sum =
-  error "todo: Course.List#sum"
+  List Int -> Int
+sum = \x -> case x of
+  Nil -> 0
+  h :. t -> h + sum t
+
+
+-- sum list = foldLeft (\a -> \b -> a + b) 0 list
+-- sum list = foldLeft (\a -> \b -> (+) a b) 0 list
+-- sum list = foldLeft (\a -> \b -> ((+) a) b) 0 list
+-- sum list = foldLeft (\a -> ((+) a)) 0 list
+-- sum list = foldLeft (+) 0 list
+-- sum = foldLeft (+) 0
+
+
+-- function composition
+-- \x -> f (g x)
+-- f . g
 
 -- | Return the length of the list.
 --
@@ -116,10 +135,12 @@ sum =
 --
 -- prop> \x -> sum (map (const 1) x) == length x
 length ::
-  List a
-  -> Int
-length =
-  error "todo: Course.List#length"
+  List a -> Int
+
+length = foldLeft (\r -> \_ -> r + 1) 0
+-- length = \x -> case x of
+--   Nil -> 0
+--   _ :. t -> 1 + length t
 
 -- | Map the given function on each element of the list.
 --
@@ -133,8 +154,18 @@ map ::
   (a -> b)
   -> List a
   -> List b
-map =
-  error "todo: Course.List#map"
+map _ Nil = Nil
+map f (h :. t) = (\b -> b :. map f t) (f h)
+-- map f (h :. t) = f h :. map f t
+-- map f = foldRight (\h t -> f h :. t) Nil
+-- map = \f -> \g -> case g of
+--   Nil -> Nil
+-- map f =
+--   foldRight (\h t -> (:.) (f h) t) Nil
+--   foldRight (\h -> (:.) (f h)) Nil
+--   foldRight ((:.) . f) Nil
+
+-- comp f g = \x -> f (g x)
 
 -- | Return elements satisfying the given predicate.
 --
@@ -150,8 +181,11 @@ filter ::
   (a -> Bool)
   -> List a
   -> List a
-filter =
-  error "todo: Course.List#filter"
+filter _ Nil = Nil
+filter f (h :. t) = 
+  let c = filter f t
+  -- in bool c (h :. c) (f h)
+  in bool id (h :.) (f h) c
 
 -- | Append two lists to a new list.
 --
@@ -169,8 +203,10 @@ filter =
   List a
   -> List a
   -> List a
-(++) =
-  error "todo: Course.List#(++)"
+-- (++) x y = case x of
+--   Nil -> y
+--   h :. t -> h :. (t ++ y)
+(++) x y = foldRight (:.) y x
 
 infixr 5 ++
 
@@ -187,8 +223,7 @@ infixr 5 ++
 flatten ::
   List (List a)
   -> List a
-flatten =
-  error "todo: Course.List#flatten"
+flatten = foldRight (++) Nil
 
 -- | Map a function then flatten to a list.
 --
@@ -204,9 +239,8 @@ flatMap ::
   (a -> List b)
   -> List a
   -> List b
-flatMap =
-  error "todo: Course.List#flatMap"
-
+flatMap f = foldRight ((++) . f) Nil
+ 
 -- | Flatten a list of lists to a list (again).
 -- HOWEVER, this time use the /flatMap/ function that you just wrote.
 --
@@ -301,8 +335,13 @@ lengthGT4 =
 reverse ::
   List a
   -> List a
-reverse =
-  error "todo: Course.List#reverse"
+-- reverse Nil = Nil
+-- reverse (h :. t) = reverse t ++ (h :. Nil)
+-- reverse = foldLeft (\r el -> el :. r) Nil
+-- reverse = foldLeft (\r el -> flip (:.) r el) Nil
+fours = 4 :. fours
+reverse = foldLeft (flip (:.)) Nil
+
 
 -- | Produce an infinite `List` that seeds with the given value at its head,
 -- then runs the given function for subsequent elements

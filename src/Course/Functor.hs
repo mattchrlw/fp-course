@@ -56,8 +56,14 @@ instance Functor List where
     (a -> b)
     -> List a
     -> List b
-  (<$>) =
-    error "todo: Course.Functor (<$>)#instance List"
+  -- (<$>) =
+  --   error "todo: Course.Functor (<$>)#instance List"
+  -- (<$>) = \f -> \l -> case l of
+  --   Nil -> Nil
+  --   h :. t -> f h :. (f <$> t)
+  (<$>) = map
+
+
 
 -- | Maps a function on the Optional functor.
 --
