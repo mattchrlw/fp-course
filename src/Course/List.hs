@@ -79,9 +79,15 @@ foldLeft f b (h :. t) = let b' = f b h in b' `seq` foldLeft f b' t
 -- prop> \x -> x `headOr` Nil == x
 headOr ::
   a -> List a -> a
-headOr = \x -> \y -> case y of
-  Nil -> x
-  h :. _ -> h
+
+-- headOr a list = foldRight (\h t -> t) a list
+-- headOr = \a list foldRight (\h t -> t) a list
+-- headOr = \a list foldRight const a list
+-- headOr = \a -> \list -> foldRight const a list
+headOr = foldRight const
+-- headOr = \x -> \y -> case y of
+--   Nil -> x
+--   h :. _ -> h
 
 
 -- | The product of the elements of a list.
@@ -99,6 +105,7 @@ product ::
 product = \x -> case x of
   Nil -> 1
   h :. t -> h * product t
+-- product = foldLeft (*) Nil
 
 -- | Sum the elements of the list.
 --
@@ -114,6 +121,7 @@ sum ::
 sum = \x -> case x of
   Nil -> 0
   h :. t -> h + sum t
+-- sum = foldLeft (+) Nil
 
 
 -- sum list = foldLeft (\a -> \b -> a + b) 0 list
@@ -154,8 +162,9 @@ map ::
   (a -> b)
   -> List a
   -> List b
-map _ Nil = Nil
-map f (h :. t) = (\b -> b :. map f t) (f h)
+-- map _ Nil = Nil
+map = \f -> foldRight ((:.) . f) Nil
+-- map f (h :. t) = (\b -> b :. map f t) (f h)
 -- map f (h :. t) = f h :. map f t
 -- map f = foldRight (\h t -> f h :. t) Nil
 -- map = \f -> \g -> case g of
@@ -181,11 +190,12 @@ filter ::
   (a -> Bool)
   -> List a
   -> List a
-filter _ Nil = Nil
-filter f (h :. t) = 
-  let c = filter f t
-  -- in bool c (h :. c) (f h)
-  in bool id (h :.) (f h) c
+-- filter _ Nil = Nil
+-- filter f (h :. t) = 
+--   let c = filter f t
+--   -- in bool c (h :. c) (f h)
+--   in bool id (h :.) (f h) c
+filter f = foldRight (\h t -> if f h then h :. t else t) Nil
 
 -- | Append two lists to a new list.
 --
@@ -248,8 +258,7 @@ flatMap f = foldRight ((++) . f) Nil
 flattenAgain ::
   List (List a)
   -> List a
-flattenAgain =
-  error "todo: Course.List#flattenAgain"
+flattenAgain = flatMap id
 
 -- | Convert a list of optional values to an optional list of values.
 --
